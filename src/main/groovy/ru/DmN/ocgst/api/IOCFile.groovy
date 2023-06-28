@@ -1,23 +1,37 @@
 package ru.DmN.ocgst.api
 
-interface IOCFile<T extends IOCFile<T>> extends Comparable<T> {
+import ru.DmN.ocgst.util.Packet
+
+interface IOCFile extends Comparable<IOCFile> {
+    default void updateCache() {}
+
     String getName()
 
-    String getPath()
+    boolean rename(String name)
 
-    boolean rename(String to)
+    String getPathToFile()
 
-    IOCDirectory getDirectory()
+    String getAbsolutePath()
 
-    boolean write(Object data)
+    IOCFile subFile(String path)
 
-    Object read()
+    boolean mkdir()
+
+    List<IOCFile> list()
 
     boolean delete()
 
+    boolean write(Object data)
+
+    boolean writeHard(String data)
+
+    Object read()
+
+    String readHard()
+
+    boolean isDirectory()
+
     boolean exists()
 
-    default boolean isDirectory() {
-        return false
-    }
+    Packet send(String action, Object data)
 }

@@ -7,14 +7,14 @@ local fss = {}
 
 for addr in component.list("filesystem") do
     local fs = component.proxy(addr)
-    if (fs.exists(".ocgst")) then
+    if (fs.exists("ocgst")) then
         fss[addr:sub(1, 3)] = fs
     end
 end
 
 while true do
     ::continue::
-    local input = socket:read()
+    local input = socket:read(2147483647)
     if input == nil then
         print("Connection error!")
         break

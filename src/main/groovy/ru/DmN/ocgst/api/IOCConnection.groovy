@@ -7,7 +7,7 @@ import java.util.function.Consumer
 interface IOCConnection {
     String getName()
 
-    IOCDrive[] getDrives()
+    IOCDrive[] getDrives(boolean cached)
 
     Packet send(String action, Object data)
 

@@ -37,8 +37,8 @@ class OCConnectionImpl implements IOCConnection, Runnable {
     }
 
     @Override
-    IOCDrive[] getDrives() {
-        return (this.send("drives", []).data as List<String>).stream().map { new OCDriveImpl(this, it) }.toArray(OCDriveImpl[]::new)
+    IOCDrive[] getDrives(boolean cached) {
+        return (this.send("drives", []).data as List<String>).stream().map { cached ? new OCCachedDriveImpl(this, it) : new OCDriveImpl(this, it) }.toArray(OCDriveImpl[]::new)
     }
 
     @Override
@@ -69,7 +69,7 @@ class OCConnectionImpl implements IOCConnection, Runnable {
         if (packet)
             return packet
         if (timeout > 0) {
-            var sleepTime = Math.min(timeout, 100)
+            var sleepTime = Math.min(timeout, OCGST.MIN_TIMEOUT)
             sleep(sleepTime)
             return read(id, timeout - sleepTime)
         } else throw new TimeoutException("Превышено время ожидания пакета")
@@ -91,7 +91,7 @@ class OCConnectionImpl implements IOCConnection, Runnable {
                 }
                 //
                 synchronized (this.ibuffer) {
-                    if (this.ibuffer.size() >= 25) {
+                    if (this.ibuffer.size() >= OCGST.BUFFER_MAX) {
                         this.ibuffer.remove(0)
                     }
                 }
@@ -99,7 +99,7 @@ class OCConnectionImpl implements IOCConnection, Runnable {
                 var lock = false
                 while (true) {
                     if (this.is.available()) {
-                        sleep(10)
+                        sleep(OCGST.BUFFER_READ_TIMEOUT)
                         break
                     } else if (this.obuffer.isEmpty() || lock) {
                         Thread.onSpinWait()
