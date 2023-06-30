@@ -47,10 +47,10 @@ class OCDriveImpl implements IOCDrive {
     }
 
     @Override
-    void sendSubscribe(String action, Object data, Function<Packet, Boolean> consumer, int timeout) {
+    void sendSubscribe(String action, Object data, Function<Packet, Boolean> consumer) {
         var packet = this.send(action, data)
         while (consumer.apply(packet)) {
-            packet = this.connection.read(packet.id, timeout)
+            packet = this.connection.read(packet.id)
         }
     }
 

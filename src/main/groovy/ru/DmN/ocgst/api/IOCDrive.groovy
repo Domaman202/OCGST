@@ -13,5 +13,5 @@ interface IOCDrive {
 
     Packet send(String action, Object data)
 
-    void sendSubscribe(String action, Object data, Function<Packet, Boolean> consumer, int timeout)
+    void sendSubscribe(String action, Object data, Function<Packet, Boolean> consumer)
 }

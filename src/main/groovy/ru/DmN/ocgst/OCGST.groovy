@@ -4,7 +4,7 @@ import ru.DmN.ocgst.api.IOCConnection
 import ru.DmN.ocgst.impl.OCConnectionImpl
 
 class OCGST {
-    static final int TIMEOUT = 10000
+    static final int TIMEOUT = 60000 * 5
     static final int MIN_TIMEOUT = 10
     static final int BUFFER_READ_TIMEOUT = 10
     static final int BUFFER_MAX = 25

@@ -11,7 +11,6 @@ import ru.DmN.ocgst.api.IOCDrive
 import ru.DmN.ocgst.api.IOCFile
 import ru.DmN.ocgst.util.OCGSTException
 import ru.DmN.ocgst.util.Packet
-import ru.DmN.ocgst.util.Utils
 
 @TypeChecked
 @CompileStatic
@@ -103,7 +102,7 @@ class OCFileImpl implements IOCFile {
                 return false
             text.append(packet.data)
             return true
-        }, OCGST.TIMEOUT)
+        })
         return text.toString()
     }
 

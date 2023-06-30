@@ -15,5 +15,5 @@ interface IOCConnection {
 
     void read(int id, Consumer<Packet> consumer)
 
-    Packet read(int id, int timeout)
+    Packet read(int id)
 }

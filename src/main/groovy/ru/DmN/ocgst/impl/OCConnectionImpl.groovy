@@ -62,18 +62,19 @@ class OCConnectionImpl implements IOCConnection, Runnable {
     }
 
     Packet read(int id, int timeout) {
-        Packet packet
-        synchronized (this.ibuffer) {
-            packet = this.ibuffer.find { it.id == id }
-            this.ibuffer.remove(packet)
-        }
-        if (packet)
-            return packet
-        if (timeout > 0) {
-            var sleepTime = Math.min(timeout, OCGST.MIN_TIMEOUT)
+        int sleepTime = Math.min(timeout, OCGST.MIN_TIMEOUT);
+        while (timeout > 0) {
+            Packet packet
+            synchronized (this.ibuffer) {
+                packet = this.ibuffer.find { it.id == id }
+                this.ibuffer.remove(packet)
+            }
+            if (packet)
+                return packet
             sleep(sleepTime)
-            return read(id, timeout - sleepTime)
-        } else throw new OCGSTTimeoutException("Превышено время ожидания пакета")
+            timeout -= sleepTime
+        }
+        throw new OCGSTTimeoutException("Превышено время ожидания пакета")
     }
 
     @Override
@@ -112,7 +113,7 @@ class OCConnectionImpl implements IOCConnection, Runnable {
                 }
                 //
                 var input = new String(this.is.readNBytes(this.is.available()))
-                println("[Input]\t$input")
+//                println("[Input]\t$input")
                 synchronized (this.ibuffer) {
                     this.ibuffer.add(new JsonSlurper().parseText(input) as Packet)
                 }
