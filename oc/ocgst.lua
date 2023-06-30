@@ -4,6 +4,8 @@ local component = require("component")
 
 local socket = inet.socket("localhost", 25585)
 local fss = {}
+local files = {}
+local lfi = 0
 
 for addr in component.list("filesystem") do
     local fs = component.proxy(addr)
@@ -37,15 +39,16 @@ while true do
             table.insert(addrs, addr)
         end
         sendpacket("R", addrs)
+    elseif packet.action == "open" then
+        lfi = lfi + 1
+        files[lfi] = io.open("/mnt/"..packet.data.fs.."/"..packet.data.path, packet.data.mode)
     elseif packet.action == "mkdir" then
         sendpacket("R", fss[packet.data.fs].makeDirectory(packet.data.path))
     elseif packet.action == "exists" then
         sendpacket("R", fss[packet.data.fs].exists(packet.data.path))
     elseif packet.action == "write" then
-        local fs = fss[packet.data.fs]
-        local handle = fs.open(packet.data.path, "w")
-        sendpacket("R", fs.write(handle, packet.data.data))
-        fs.close(handle)
+        files[packet.data.handle].write(packet.data.data)
+        sendpacket("R", true)
     elseif packet.action == "space" then
         sendpacket("R", fss[packet.data.fs].spaceTotal())
     elseif packet.action == "isdir" then
@@ -56,12 +59,11 @@ while true do
         sendpacket("R", fss[packet.data.fs].list(packet.data.path))
     elseif packet.action == "rm" then
         sendpacket("R", fss[packet.data.fs].remove(packet.data.path))
+    elseif packet.action == "close" then
+        sendpacket("R", fss[packet.data.fs].close(packet.data.handle))
     elseif packet.action == "size" then
         sendpacket("R", fss[packet.data.fs].size(packet.data.path))
     elseif packet.action == "read" then
-        local fs = fss[packet.data.fs]
-        local handle = fs.open(packet.data.path, "r")
-        sendpacket("R", fs.read(handle, 2147483647))
-        fs.close(handle)
+        io.close(files[packet.data.handle])
     end
 end

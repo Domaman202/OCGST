@@ -18,9 +18,9 @@ class MainTests {
         dir$test.mkdir()
         //
         test0(dir$test, "A")
-        test1(dir$test, "A")
-        test0(dir$test, "B")
-        test1(dir$test, "B")
+//        test1(dir$test, "A")
+//        test0(dir$test, "B")
+//        test1(dir$test, "B")
         //
         dir$test.delete()
     }

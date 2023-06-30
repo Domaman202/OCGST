@@ -9,22 +9,23 @@ import groovy.transform.TypeChecked
 import ru.DmN.ocgst.OCGST
 import ru.DmN.ocgst.api.IOCDrive
 import ru.DmN.ocgst.api.IOCFile
-import ru.DmN.ocgst.util.ComplexFileComparator
-import ru.DmN.ocgst.util.Utils
 import ru.DmN.ocgst.util.OCGSTException
 import ru.DmN.ocgst.util.Packet
+import ru.DmN.ocgst.util.Utils
 
+@TypeChecked
 @CompileStatic
 @Canonical
-@TypeChecked
 @EqualsAndHashCode
 class OCFileImpl implements IOCFile {
     protected final IOCDrive drive
     protected String path
+    protected int handle
 
     OCFileImpl(IOCDrive drive, String path) {
         this.drive = drive
         this.path = path
+        this.handle = -1
     }
 
     @Override
@@ -70,7 +71,6 @@ class OCFileImpl implements IOCFile {
 
     @Override
     boolean delete() {
-        this.updateCache()
         return this.send("rm", [:]).data
     }
 
@@ -78,21 +78,21 @@ class OCFileImpl implements IOCFile {
     boolean write(Object data) {
         if (this.isDirectory())
             throw new OCGSTException(this.toString())
-        this.send("mkdir", [:])
-        this.drive.send("write", [path: this.subFile("ocgst").getAbsolutePath(), data: "f"])
-        this.write0(data)
+        this.open()
+        var result = this.write0(data)
+        this.close()
+        return result
     }
 
     boolean write0(Object data) {
         var str = JsonOutput.toJson(data)
-        var fcount = Math.ceil(str.length() / OCGST.FILE_MAX_SIZE as float) as int
         // cleanup
         this.list().stream().filter { it.startsWith("ocgst.") && it.endsWith(".data") }.map { this.subFile(it) }.forEach(IOCFile::delete)
         // split
         var arrs = Utils.split(str.chars.toList(), OCGST.FILE_MAX_SIZE)
         // write
         for (i in 0..<arrs.size()) {
-            this.subFile("ocgst.${i}.data").writeHard(new String(arrs[i].toArray() as char[]))
+            this.writeHard(new String(arrs[i].toArray() as char[]))
         }
         //
         return true
@@ -105,20 +105,21 @@ class OCFileImpl implements IOCFile {
 
     @Override
     Object read() {
-        if (this.send("isdir", [:]).data) {
-            var properties = this.subFile("ocgst")
-            if (properties.exists() && properties.readHard() == "f") {
-                return read0();
-            }
-        }
-        throw new OCGSTException(this.toString())
+        if (this.isDirectory())
+            throw new OCGSTException(this.toString())
+        this.open()
+        var result = this.read0()
+        this.close()
+        return result
     }
 
     Object read0() {
-        var files = this.list().stream().filter { it.startsWith("ocgst.") && it.endsWith(".data") }.sorted(new ComplexFileComparator()::compare).toList()
         var text = new StringBuilder()
-        files.stream().map { this.subFile(it) }.forEach {
-            text.append(it.readHard())
+        while (true) {
+            var read = this.readHard()
+            if (read == "nil")
+                break
+            text.append(read)
         }
         return new JsonSlurper().parseText(text.toString())
     }
@@ -130,10 +131,7 @@ class OCFileImpl implements IOCFile {
 
     @Override
     boolean isDirectory() {
-        if (this.send("isdir", [:]).data) {
-            var properties = this.subFile("ocgst")
-            return properties.exists() && properties.readHard() == "d"
-        } else return false
+        return this.send("isdir", [:]).data
     }
 
     @Override
@@ -148,6 +146,19 @@ class OCFileImpl implements IOCFile {
         this.drive.send(action, data)
     }
 
+    void open() {
+        if (this.handle == -1) {
+            this.handle = this.send("open", [:]).data as int
+        }
+    }
+
+    void close() {
+        if (this.handle != -1) {
+            this.drive.send("close", [handle:handle])
+            this.handle = -1
+        }
+    }
+
     @Override
     int compareTo(IOCFile o) {
         return this.getName() <=> o.getName()
@@ -156,5 +167,11 @@ class OCFileImpl implements IOCFile {
     @Override
     String toString() {
         return "OCFileImpl{drive=$drive,path=$path}"
+    }
+
+    @Override
+    protected void finalize() throws Throwable {
+        super.finalize()
+        this.close()
     }
 }

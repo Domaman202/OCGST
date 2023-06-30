@@ -3,8 +3,6 @@ package ru.DmN.ocgst.api
 import ru.DmN.ocgst.util.Packet
 
 interface IOCFile extends Comparable<IOCFile> {
-    default void updateCache() {}
-
     String getName()
 
     boolean rename(String name)
