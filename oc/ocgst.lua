@@ -16,7 +16,7 @@ while true do
     -- Получаем первый байт
     local input = ""
     while input == "" do
-        input = socket:read(1)
+        input = socket:read(2048)
         if input == nil then
             print("Connection error!")
             return
@@ -25,7 +25,7 @@ while true do
     -- Считываем весь пакет
     local text = input
     while input ~= "" do
-        input = socket:read(1024)
+        input = socket:read(2048)
         if input == nil then
             print("Connection error!")
             return
@@ -33,7 +33,7 @@ while true do
         text = text..input
     end
 
-    print("[Input]"..text)
+    --print("[Input]"..text)
     local packet = json.decode(text)
 
     local function sendpacket(act, data)
