@@ -78,24 +78,8 @@ class OCFileImpl implements IOCFile {
     boolean write(Object data) {
         if (this.isDirectory())
             throw new OCGSTException(this.toString())
-        this.open()
-        var result = this.write0(data)
-        this.close()
-        return result
-    }
-
-    boolean write0(Object data) {
-        var str = JsonOutput.toJson(data)
-        // cleanup
-        this.list().stream().filter { it.startsWith("ocgst.") && it.endsWith(".data") }.map { this.subFile(it) }.forEach(IOCFile::delete)
-        // split
-        var arrs = Utils.split(str.chars.toList(), OCGST.FILE_MAX_SIZE)
-        // write
-        for (i in 0..<arrs.size()) {
-            this.writeHard(new String(arrs[i].toArray() as char[]))
-        }
-        //
-        return true
+        var text = JsonOutput.toJson(data)
+        return this.writeHard(text)
     }
 
     @Override
@@ -107,26 +91,20 @@ class OCFileImpl implements IOCFile {
     Object read() {
         if (this.isDirectory())
             throw new OCGSTException(this.toString())
-        this.open()
-        var result = this.read0()
-        this.close()
-        return result
-    }
-
-    Object read0() {
-        var text = new StringBuilder()
-        while (true) {
-            var read = this.readHard()
-            if (read == "nil")
-                break
-            text.append(read)
-        }
-        return new JsonSlurper().parseText(text.toString())
+        var text = this.readHard()
+        return new JsonSlurper().parseText(text)
     }
 
     @Override
     String readHard() {
-        return this.send("read", [:]).data
+        var text = new StringBuilder()
+        this.drive.sendSubscribe("read", [path:this.path], packet -> {
+            if (packet.data == null)
+                return false
+            text.append(packet.data)
+            return true
+        }, OCGST.TIMEOUT)
+        return text.toString()
     }
 
     @Override
@@ -146,19 +124,6 @@ class OCFileImpl implements IOCFile {
         this.drive.send(action, data)
     }
 
-    void open() {
-        if (this.handle == -1) {
-            this.handle = this.send("open", [:]).data as int
-        }
-    }
-
-    void close() {
-        if (this.handle != -1) {
-            this.drive.send("close", [handle:handle])
-            this.handle = -1
-        }
-    }
-
     @Override
     int compareTo(IOCFile o) {
         return this.getName() <=> o.getName()
@@ -167,11 +132,5 @@ class OCFileImpl implements IOCFile {
     @Override
     String toString() {
         return "OCFileImpl{drive=$drive,path=$path}"
-    }
-
-    @Override
-    protected void finalize() throws Throwable {
-        super.finalize()
-        this.close()
     }
 }

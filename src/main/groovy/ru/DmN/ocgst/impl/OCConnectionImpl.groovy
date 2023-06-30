@@ -5,9 +5,9 @@ import groovy.json.JsonSlurper
 import ru.DmN.ocgst.OCGST
 import ru.DmN.ocgst.api.IOCConnection
 import ru.DmN.ocgst.api.IOCDrive
+import ru.DmN.ocgst.util.OCGSTTimeoutException
 import ru.DmN.ocgst.util.Packet
 
-import java.util.concurrent.TimeoutException
 import java.util.function.Consumer
 
 class OCConnectionImpl implements IOCConnection, Runnable {
@@ -65,6 +65,7 @@ class OCConnectionImpl implements IOCConnection, Runnable {
         Packet packet
         synchronized (this.ibuffer) {
             packet = this.ibuffer.find { it.id == id }
+            this.ibuffer.remove(packet)
         }
         if (packet)
             return packet
@@ -72,7 +73,7 @@ class OCConnectionImpl implements IOCConnection, Runnable {
             var sleepTime = Math.min(timeout, OCGST.MIN_TIMEOUT)
             sleep(sleepTime)
             return read(id, timeout - sleepTime)
-        } else throw new TimeoutException("Превышено время ожидания пакета")
+        } else throw new OCGSTTimeoutException("Превышено время ожидания пакета")
     }
 
     @Override

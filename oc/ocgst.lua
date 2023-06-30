@@ -4,8 +4,6 @@ local component = require("component")
 
 local socket = inet.socket("localhost", 25585)
 local fss = {}
-local files = {}
-local lfi = 0
 
 for addr in component.list("filesystem") do
     local fs = component.proxy(addr)
@@ -15,17 +13,28 @@ for addr in component.list("filesystem") do
 end
 
 while true do
-    ::continue::
-    local input = socket:read(2147483647)
-    if input == nil then
-        print("Connection error!")
-        break
-    elseif input == "" then
-        goto continue
+    -- Получаем первый байт
+    local input = ""
+    while input == "" do
+        input = socket:read(1)
+        if input == nil then
+            print("Connection error!")
+            return
+        end
+    end
+    -- Считываем весь пакет
+    local text = input
+    while input ~= "" do
+        input = socket:read(1024)
+        if input == nil then
+            print("Connection error!")
+            return
+        end
+        text = text..input
     end
 
-    print("[Input]"..input)
-    local packet = json.decode(input)
+    print("[Input]"..text)
+    local packet = json.decode(text)
 
     local function sendpacket(act, data)
         socket:write(json.encode({ id = packet.id, action = act, data = data }))
@@ -47,8 +56,10 @@ while true do
     elseif packet.action == "exists" then
         sendpacket("R", fss[packet.data.fs].exists(packet.data.path))
     elseif packet.action == "write" then
-        files[packet.data.handle].write(packet.data.data)
-        sendpacket("R", true)
+        local fs = fss[packet.data.fs]
+        local handle = fs.open(packet.data.path, "w")
+        sendpacket("R", fs.write(handle, packet.data.data))
+        fs.close(handle)
     elseif packet.action == "space" then
         sendpacket("R", fss[packet.data.fs].spaceTotal())
     elseif packet.action == "isdir" then
@@ -59,11 +70,16 @@ while true do
         sendpacket("R", fss[packet.data.fs].list(packet.data.path))
     elseif packet.action == "rm" then
         sendpacket("R", fss[packet.data.fs].remove(packet.data.path))
-    elseif packet.action == "close" then
-        sendpacket("R", fss[packet.data.fs].close(packet.data.handle))
     elseif packet.action == "size" then
         sendpacket("R", fss[packet.data.fs].size(packet.data.path))
     elseif packet.action == "read" then
-        io.close(files[packet.data.handle])
+        local fs = fss[packet.data.fs]
+        local handle = fs.open(packet.data.path, "r")
+        local data = ""
+        while data ~= nil do
+            data = fs.read(handle, 2048)
+            sendpacket("R", data)
+        end
+        fs.close(handle)
     end
 end

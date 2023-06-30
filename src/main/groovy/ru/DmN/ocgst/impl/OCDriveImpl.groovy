@@ -5,7 +5,12 @@ import groovy.transform.EqualsAndHashCode
 import groovy.transform.TypeChecked
 import ru.DmN.ocgst.api.IOCDrive
 import ru.DmN.ocgst.api.IOCFile
+import ru.DmN.ocgst.util.OCGSTTimeoutException
 import ru.DmN.ocgst.util.Packet
+
+import java.util.concurrent.TimeoutException
+import java.util.function.Consumer
+import java.util.function.Function
 
 @Canonical
 @TypeChecked
@@ -38,7 +43,15 @@ class OCDriveImpl implements IOCDrive {
     Packet send(String action, Object data) {
         if (data["fs"] == null)
             data["fs"] = this.name
-        return connection.send(action, data)
+        return this.connection.send(action, data)
+    }
+
+    @Override
+    void sendSubscribe(String action, Object data, Function<Packet, Boolean> consumer, int timeout) {
+        var packet = this.send(action, data)
+        while (consumer.apply(packet)) {
+            packet = this.connection.read(packet.id, timeout)
+        }
     }
 
     @Override
