@@ -13,7 +13,7 @@ class Utils {
     }
 
     static <T> T[][] split(T[] array, int size) {
-        var count = Math.ceil(array.length / size) as int
+        var count = Math.ceil(array.length / size as int) as int
         var elements = new Object[count][size]
         var k = 0
         for (i in 0..<count) {
@@ -28,7 +28,7 @@ class Utils {
     }
 
     static <T> List<List<Character>> split(List<T> list, int size) {
-        var count = Math.ceil(list.size() / size) as int
+        var count = Math.ceil(list.size() / size as int) as int
         var elements = new ArrayList(count)
         var k = 0
         for (i in 0..<count) {
