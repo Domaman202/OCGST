@@ -26,19 +26,4 @@ class Utils {
         }
         return elements as T[][]
     }
-
-    static <T> List<List<Character>> split(List<T> list, int size) {
-        var count = Math.ceil(list.size() / size as int) as int
-        var elements = new ArrayList(count)
-        var k = 0
-        for (i in 0..<count) {
-            var element = elements[i] = new ArrayList<>(size)
-            for (j in 0..<size) {
-                if (k == list.size())
-                    break
-                element[j] = list[k++]
-            }
-        }
-        return elements
-    }
 }
