@@ -1,5 +1,8 @@
 package ru.DmN.ocgst.util
 
+import groovy.transform.CompileStatic
+
+@CompileStatic
 class Utils {
     static int bti(byte[] bytes) {
         return ((0xFF & bytes[0]) << 24) | ((0xFF & bytes[1]) << 16) | ((0xFF & bytes[2]) << 8) | (0xFF & bytes[3])

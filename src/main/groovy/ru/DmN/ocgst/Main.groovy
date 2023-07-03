@@ -1,12 +1,13 @@
 package ru.DmN.ocgst
 
-
+import groovy.transform.CompileStatic
 import ru.ind.tgs.GroovyShellService
 
+@CompileStatic
 class Main {
-    static final def ocgst = new OCGST()
-    static final def ocgstThread = new Thread({ ocgst.main() })
-    static final def service = new GroovyShellService()
+    static final OCGST ocgst = new OCGST()
+    static final Thread ocgstThread = new Thread({ ocgst.main() })
+    static final GroovyShellService service = new GroovyShellService()
 
     static void main(String[] args) {
         ocgstThread.setName("OCGST")

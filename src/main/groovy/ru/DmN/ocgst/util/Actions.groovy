@@ -1,5 +1,8 @@
 package ru.DmN.ocgst.util
 
+import groovy.transform.CompileStatic
+
+@CompileStatic
 enum Actions {
     READ,       // 0
     WRITE,      // 1
