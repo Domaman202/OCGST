@@ -1,32 +1,26 @@
 package ru.DmN.ocgst.test
 
-import com.mkyong.io.image.ImageUtils
-import groovy.json.JsonOutput
-import groovy.json.JsonSlurper
-import ru.DmN.ocgst.impl.OCFileImpl
-import ru.DmN.ocgst.util.Utils
-
-import javax.imageio.ImageIO
+import ru.DmN.ocgst.api.OCConnection
+import ru.DmN.ocgst.api.OCFile
+import ru.DmN.ocgst.util.Actions
 
 class OtherTests {
     static void main(String[] args) {
-//        test0()
-        test1()
-    }
+        try (final def server = new ServerSocket(25585)) {
+            final def connection = new OCConnection(server.accept())
+            connection.start()
 
-    private static void test0() {
-        var bw = ImageUtils.toByteArray(ImageIO.read(new File("test/inA.png")), "PNG")
-        println(bw)
-        var br = bw.toList()
-        println(br)
-        ImageIO.write(ImageUtils.toBufferedImage(br.toArray() as byte[]), "PNG", new File("test/outA.png"))
-    }
+            connection.pushAction(Actions.DRIVE_LIST.ordinal(), "", 0, { println(new String(it.read())) })
 
-    private static void test1() {
-        var in$str = JsonOutput.toJson(ImageUtils.toByteArray(ImageIO.read(new File("test/inB.png")), "PNG"))
-        var chars = Utils.split(in$str.chars.toList(), OCFileImpl.FILE_MAX_SIZE)
-        var out$str = new StringBuilder()
-        chars.forEach { it.forEach { out$str.append(it) } }
-        ImageIO.write(ImageUtils.toBufferedImage((new JsonSlurper().parseText(out$str.toString()) as List<Byte>).toArray() as byte[]), "PNG", new File("test/outB.png"))
+            final def file = new OCFile(connection, 2, "test")
+            try (final def os = file.openOutputStream()) {
+                for (i in 0..<1000)
+                    os.write("Hello, user$i!\n".bytes)
+                os.write("Meow!".bytes)
+            }
+            try (final def is = file.openInputStream()) {
+                println(new String(is.readAllBytes()))
+            }
+        }
     }
 }

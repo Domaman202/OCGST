@@ -1,85 +1,91 @@
+local io = require("io")
 local inet = require("internet")
-local json = (loadfile "json.lua")()
+local math = require("math")
+local bit32 = require("bit32")
+local table = require("table")
+local string = require("string")
 local component = require("component")
 
-local socket = inet.socket("localhost", 25585)
+local socket = inet.open("localhost", 25585)
 local fss = {}
 
-for addr in component.list("filesystem") do
-    local fs = component.proxy(addr)
-    if (fs.exists("ocgst")) then
-        fss[addr:sub(1, 3)] = fs
-    end
+local function bti(bytes)
+    return string.byte(string.sub(bytes, 1, 2))*256^3 + string.byte(string.sub(bytes, 2, 3))*256^2 + string.byte(string.sub(bytes, 3, 4))*256 + string.byte(string.sub(bytes, 4, 5))
+end
+
+local function itb(i)
+    return string.char(bit32.band(bit32.rshift(i, 24), 0xFF), bit32.band(bit32.rshift(i, 16), 0xFF), bit32.band(bit32.rshift(i, 8), 0xFF), bit32.band(i, 0xFF))
+end
+
+local function readByte()
+    return string.byte(socket:read(1))
+end
+
+local function readBytes()
+    return socket:read(bti(socket:read(4)))
+end
+
+local function readPacket()
+    return readByte(), readByte(), readBytes()
+end
+
+local function sendByte(byte)
+    socket:write(string.char(bit32.band(byte, 0xFF)))
+    socket:flush()
+end
+
+local function sendBytes(bytes)
+    socket:write(itb(bytes:len()))
+    socket:write(bytes)
+    socket:flush()
+end
+
+for k, v in component.list("filesystem") do
+    table.insert(fss, component.proxy(k))
 end
 
 while true do
-    -- Получаем первый байт
-    local input = ""
-    while input == "" do
-        input = socket:read(2048)
-        if input == nil then
-            print("Connection error!")
-            return
+    local action, fs, path = readPacket()
+    --print(action, fs, path)
+    fs = fss[fs]
+    if action == 0 then
+        --print("[r] start")
+        local handle, err = fs.open(path, "r")
+        local size = fs.size(path)
+        socket:write(itb(size))
+        while size > 0 do
+            local data = fs.read(handle, size)
+            --print(size, data:len())
+            size = size - data:len()
+            socket:write(data)
+            socket:flush()
         end
-    end
-    -- Считываем весь пакет
-    local text = input
-    while input ~= "" do
-        input = socket:read(2048)
-        if input == nil then
-            print("Connection error!")
-            return
-        end
-        text = text..input
-    end
-
-    --print("[Input]"..text)
-    local packet = json.decode(text)
-
-    local function sendpacket(act, data)
-        socket:write(json.encode({ id = packet.id, action = act, data = data }))
-    end
-
-    if packet.action == "hello" then
-        sendpacket("R", component.computer.address:sub(1,3))
-    elseif packet.action == "drives" then
-        local addrs = {}
-        for addr, _ in pairs(fss) do
-            table.insert(addrs, addr)
-        end
-        sendpacket("R", addrs)
-    elseif packet.action == "open" then
-        lfi = lfi + 1
-        files[lfi] = io.open("/mnt/"..packet.data.fs.."/"..packet.data.path, packet.data.mode)
-    elseif packet.action == "mkdir" then
-        sendpacket("R", fss[packet.data.fs].makeDirectory(packet.data.path))
-    elseif packet.action == "exists" then
-        sendpacket("R", fss[packet.data.fs].exists(packet.data.path))
-    elseif packet.action == "write" then
-        local fs = fss[packet.data.fs]
-        local handle = fs.open(packet.data.path, "w")
-        sendpacket("R", fs.write(handle, packet.data.data))
+        --print("[r] complete")
         fs.close(handle)
-    elseif packet.action == "space" then
-        sendpacket("R", fss[packet.data.fs].spaceTotal())
-    elseif packet.action == "isdir" then
-        sendpacket("R", fss[packet.data.fs].isDirectory(packet.data.path))
-    elseif packet.action == "rename" then
-        sendpacket("R", fss[packet.data.fs].rename(packet.data.path, packet.data.to))
-    elseif packet.action == "list" then
-        sendpacket("R", fss[packet.data.fs].list(packet.data.path))
-    elseif packet.action == "rm" then
-        sendpacket("R", fss[packet.data.fs].remove(packet.data.path))
-    elseif packet.action == "size" then
-        sendpacket("R", fss[packet.data.fs].size(packet.data.path))
-    elseif packet.action == "read" then
-        local fs = fss[packet.data.fs]
-        local handle = fs.open(packet.data.path, "r")
-        local data = ""
-        while data ~= nil do
-            data = fs.read(handle, 2048)
-            sendpacket("R", data)
+    elseif action == 1 then
+        --print("[w] start")
+        local handle, err = fs.open(path, "w")
+        local size = bti(socket:read(4))
+        while size > 0 do
+            local data = socket:read(math.min(2048, size))
+            --print(size, data:len())
+            size = size - data:len()
+            fs.write(handle, data)
         end
+        --print("[w] complete")
         fs.close(handle)
+    elseif action == 2 then
+        local out = ""
+        for k, v in ipairs(fss) do
+            out = out..v.fsnode.name..";"
+        end
+        sendBytes(out)
+    elseif action == 3 then
+        sendByte(fs.isDirectory(path))
+    elseif action == 4 then
+        fs.makeDirectory(path)
+    elseif action == 5 then
+        fs.remove(path)
     end
+    sendByte(0)
 end
