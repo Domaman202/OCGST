@@ -1,6 +1,7 @@
 package ru.DmN.ocgst.api
 
 import groovy.transform.CompileStatic
+import groovy.transform.Synchronized
 import ru.DmN.ocgst.util.Action
 import ru.DmN.ocgst.util.Actions
 import ru.DmN.ocgst.util.Status
@@ -51,18 +52,19 @@ class OCConnection extends Thread {
         this.pool.add(new Tuple2<>(new Action(action, fs, path), callback))
     }
 
+    @Synchronized("is")
     byte[] read() {
-        synchronized (this.is) {
-            var size = Utils.bti(is.readNBytes(4))
-            return this.is.readNBytes(size)
-        }
+        var size = Utils.bti(is.readNBytes(4))
+        return this.is.readNBytes(size)
     }
 
+    @Synchronized("os")
     void write(byte[] bytes) {
         this.os.write(Utils.itb(bytes.length))
         this.os.write(bytes)
     }
 
+    @Synchronized("os")
     void send(Actions action, int fs, String path) {
         this.os.write(action.ordinal())
         this.os.write(fs)
