@@ -10,17 +10,22 @@ class OtherTests {
             final def connection = new OCConnection(server.accept())
             connection.start()
 
-            connection.pushAction(Actions.DRIVE_LIST.ordinal(), "", 0, { println(new String(it.read())) })
+            connection.pushAction(Actions.DRIVE_LIST, 0, "", {
+                var arr = new String(it.read()).split(";")
+                for (i in 0..<arr.length) {
+                    println("[$i] ${arr[i]}")
+                }
+            })
 
-            final def file = new OCFile(connection, 2, "test")
-            try (final def os = file.openOutputStream()) {
-                for (i in 0..<1000)
-                    os.write("Hello, user$i!\n".bytes)
-                os.write("Meow!".bytes)
-            }
-            try (final def is = file.openInputStream()) {
-                println(new String(is.readAllBytes()))
-            }
+//            final def file = new OCFile(connection, 2, "test")
+//            try (final def os = file.openOutputStream()) {
+//                for (i in 0..<1000)
+//                    os.write("Hello, user$i!\n".bytes)
+//                os.write("Meow!".bytes)
+//            }
+//            try (final def is = file.openInputStream()) {
+//                println(new String(is.readAllBytes()))
+//            }
         }
     }
 }

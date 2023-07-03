@@ -4,6 +4,7 @@ import com.mkyong.io.image.ImageUtils
 import org.apache.commons.lang3.time.StopWatch
 import ru.DmN.ocgst.Main
 import ru.DmN.ocgst.api.OCFile
+import ru.DmN.ocgst.util.Actions
 
 import javax.imageio.ImageIO
 
@@ -11,10 +12,21 @@ class MainTests {
     static void main(String[] args) {
         Main.main()
         //
-        sleep(5000)
+        while (Main.ocgst.connections.empty) Thread.onSpinWait()
+        final def connection = Main.ocgst.connections[0]
         //
-        var connection = Main.ocgst.connections[0]
-        var dir$test = new OCFile(connection, 2, "test")
+        connection.pushAction(Actions.DRIVE_LIST, 0, "", {
+            var arr = new String(it.read()).split(";")
+            for (i in 0..<arr.length) {
+                println("[$i] ${arr[i]}")
+            }
+        })
+        //
+        sleep(1000)
+        print("Enter fs id: ")
+        var fs = new Scanner(System.in).nextInt()
+        //
+        var dir$test = new OCFile(connection, fs, "test")
         dir$test.mkdir()
         //
         test0(dir$test, "A")
