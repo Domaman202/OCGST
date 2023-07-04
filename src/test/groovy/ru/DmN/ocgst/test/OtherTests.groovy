@@ -1,5 +1,8 @@
 package ru.DmN.ocgst.test
 
+import groovy.transform.CompileStatic
+
+@CompileStatic
 class OtherTests {
     static void main(String[] args) {
         var input = new BufferedInputStream(new FileInputStream("test/inE.mp3"))

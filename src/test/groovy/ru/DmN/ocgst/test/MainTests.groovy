@@ -1,14 +1,18 @@
 package ru.DmN.ocgst.test
 
-import com.mkyong.io.image.ImageUtils
+import groovy.transform.CompileStatic
 import org.apache.commons.lang3.time.StopWatch
 import ru.DmN.ocgst.Main
 import ru.DmN.ocgst.api.IOCFile
-import ru.DmN.ocgst.api.OCFile
+import ru.DmN.ocgst.api.OCConnection
+import ru.DmN.ocgst.impl.OCFile
 import ru.DmN.ocgst.util.Actions
+import ru.DmN.ocgst.util.Status
 
-import javax.imageio.ImageIO
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
 
+@CompileStatic
 class MainTests {
     static void main(String[] args) {
         Main.main()
@@ -30,70 +34,68 @@ class MainTests {
         var dir$test = new OCFile(connection, fs, "test")
         dir$test.mkdir()
         //
-        test(dir$test)
+        test([connection], dir$test)
         //
         dir$test.delete()
     }
 
-    static void test(IOCFile dir$test) {
-        test0(dir$test, "A.txt")
-        test1(dir$test, "A")
-        test0(dir$test, "B.txt")
-        test1(dir$test, "B")
-        test1(dir$test, "C")
-        test0(dir$test, "D.txt")
-        test0(dir$test, "E.mp3")
-        test0(dir$test, "F.mp4")
+    static void test(List<OCConnection> connection, IOCFile dir$test) {
+        try (final def zin = new ZipInputStream(new FileInputStream("test/in/data.zip"))) {
+            ZipEntry entry
+            while ((entry = zin.getNextEntry()) != null) {
+                testRaw(connection, dir$test, entry.name, zin)
+                zin.closeEntry()
+            }
+        }
     }
 
-    static void test0(IOCFile dir$test, String file) {
-        var file$tf = dir$test.subfile("text${file}.data")
-        byte[] bw
-        try (var input = new FileInputStream("test/in${file}")) {
-            bw = input.readAllBytes()
-        }
-        //
-        var sw = new StopWatch()
-        sw.start()
-        //
-        try (var os = file$tf.openOutputStream()) {
-            os.write(bw)
-        }
-        //
-        byte[] br
-        try (var is = file$tf.openInputStream()) {
-            br = is.readAllBytes()
-        }
-        //
-        sw.stop()
-        println("[File = in${file}][Time = $sw]")
-        //
-        try (var output = new FileOutputStream("test/out${file}")) {
+    static void testRaw(List<OCConnection> connection, IOCFile dir$test, String name, InputStream input) {
+        byte[] bw = input.readAllBytes()
+        var br = test(connection, dir$test, name, bw)
+        try (var output = new FileOutputStream("test/out/${name}")) {
             output.write(br)
         }
     }
 
-    static void test1(IOCFile dir$test, String file) {
-        var file$tf = dir$test.subfile("image${file}.png")
-        var bw = ImageUtils.toByteArray(ImageIO.read(new File("test/in${file}.png")), "PNG")
-//        println(bw)
+    static byte[] test(List<OCConnection> connection, IOCFile dir$test, String name, byte[] bw) {
+        var file$tf = dir$test.subfile("${name}")
+        var sw0 = new StopWatch()
+        var sw1 = new StopWatch()
+        var sw2 = new StopWatch()
         //
-        var sw = new StopWatch()
-        sw.start()
+        sw0.start()
+        sw1.start()
         //
         try (var os = file$tf.openOutputStream()) {
             os.write(bw)
         }
+        //
+        connection.forEach {
+            while (it.status == Status.PROCESSING) {
+                Thread.onSpinWait()
+            }
+        }
+
+        //
+        sw1.stop()
+        println("[File = ${name}]\t[Write]\t[Time = $sw1]")
+        //
+        sw2.start()
         //
         byte[] br
         try (var is = file$tf.openInputStream()) {
             br = is.readAllBytes()
         }
         //
-        sw.stop()
-        println("[File = in${file}.png][Time = $sw]")
+        sw2.stop()
+        sw0.stop()
+        println("[File = ${name}]\t[Read]\t[Time = $sw2]")
+        println("[File = ${name}]\t[Sum]\t[Time = $sw0]")
         //
-//        println(br)
-        ImageIO.write(ImageUtils.toBufferedImage((br as List<Byte>).toArray() as byte[]), "PNG", new File("test/out${file}.png"))
+        return br
+    }
+
+    static {
+        new File("test/out").mkdir()
     }
 }

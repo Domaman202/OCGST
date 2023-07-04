@@ -15,7 +15,7 @@ class OCConnection extends Thread {
     final BufferedInputStream is = new BufferedInputStream(socket.inputStream)
     final BufferedOutputStream os = new BufferedOutputStream(socket.outputStream)
     protected final Queue<Tuple2<Action, Consumer<OCConnection>>> pool = new ArrayDeque<>()
-    protected Status status = Status.READY
+    Status status = Status.READY
 
     OCConnection(Socket socket) {
         this.socket = socket

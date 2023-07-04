@@ -1,9 +1,11 @@
 package ru.DmN.ocgst.test
 
+import groovy.transform.CompileStatic
 import ru.DmN.ocgst.Main
 import ru.DmN.ocgst.api.OCConnection
-import ru.DmN.ocgst.complex.OCCFile
+import ru.DmN.ocgst.impl.OCCFile
 
+@CompileStatic
 class AdvancedTests {
     private static final int CONNECTIONS_COUNT = 64
 
@@ -19,7 +21,7 @@ class AdvancedTests {
         var dir$test = new OCCFile(fss, "test")
         dir$test.mkdir()
         //
-        MainTests.test(dir$test)
+        MainTests.test(fss.collect { it.v1 }, dir$test)
         //
         dir$test.delete()
     }
