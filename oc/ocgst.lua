@@ -41,38 +41,41 @@ local function sendBytes(bytes)
 end
 
 for k, v in component.list("filesystem") do
-    table.insert(fss, component.proxy(k))
+    local fs = component.proxy(k)
+    if fs.exists("ocgst") then
+        table.insert(fss, fs)
+    end
 end
 
 while true do
     local action, fs, path = readPacket()
-    --print(action, fs, path)
+    print(action, fs, path)
     fs = fss[fs]
     if action == 0 then
-        --print("[r] start")
+        print("[r] start")
         local handle, err = fs.open(path, "r")
         local size = fs.size(path)
         socket:write(itb(size))
         while size > 0 do
             local data = fs.read(handle, size)
-            --print(size, data:len())
+            print(size, data:len())
             size = size - data:len()
             socket:write(data)
             socket:flush()
         end
-        --print("[r] complete")
+        print("[r] complete")
         fs.close(handle)
     elseif action == 1 then
-        --print("[w] start")
+        print("[w] start")
         local handle, err = fs.open(path, "w")
         local size = bti(socket:read(4))
         while size > 0 do
             local data = socket:read(math.min(2048, size))
-            --print(size, data:len())
+            print(size, data:len())
             size = size - data:len()
             fs.write(handle, data)
         end
-        --print("[w] complete")
+        print("[w] complete")
         fs.close(handle)
     elseif action == 2 then
         local out = ""
@@ -81,7 +84,7 @@ while true do
         end
         sendBytes(out)
     elseif action == 3 then
-        sendByte(fs.isDirectory(path))
+        sendByte(fs.isDirectory(path) and 1 or 0)
     elseif action == 4 then
         fs.makeDirectory(path)
     elseif action == 5 then

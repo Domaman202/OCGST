@@ -59,7 +59,7 @@ class OCFile {
     }
 
     static class FileInputStream extends ByteArrayInputStream {
-        protected FileInputStream(byte[] buf) {
+        FileInputStream(byte[] buf) {
             super(buf)
         }
     }
