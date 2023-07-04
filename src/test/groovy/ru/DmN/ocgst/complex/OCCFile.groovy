@@ -1,9 +1,12 @@
 package ru.DmN.ocgst.complex
 
 import groovy.transform.Canonical
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
+import org.apache.commons.lang3.stream.Streams
+import org.codehaus.groovy.runtime.DefaultGroovyMethods
 import ru.DmN.ocgst.api.IOCFile
 import ru.DmN.ocgst.api.OCConnection
 import ru.DmN.ocgst.api.OCFile
@@ -64,24 +67,32 @@ class OCCFile implements IOCFile {
 
     @Override
     InputStream openInputStream() {
-        def bytes = new byte[this.connections.length][]
-        def flags = new boolean[this.connections.length]
-        for (i in 0..<this.connections.length) {
+        var c = this.connections.length
+        var bytes = new byte[c][]
+        for (i in 0..<c) {
             final j = i
             final connection = this.connections[i]
             connection.v1.pushAction(Actions.READ, connection.v2, this.getAbsolutePath(), {
                 bytes[j] = it.read()
-                flags[j] = true
                 null
             })
         }
-        def baos = new ByteArrayOutputStream()
-        for (i in 0..<flags.length) {
-            while (!flags[i])
+
+        var len = 0
+        for (i in 0..<bytes.length) {
+            while (bytes[i] == null)
                 Thread.onSpinWait()
-            baos.write(bytes[i])
+            len += bytes[i].length
         }
-        return new OCFile.FileInputStream(baos.toByteArray())
+
+        byte[] result = new byte[len]
+        int currentIndex = 0
+        for (byte[] arr : bytes) {
+            System.arraycopy(arr, 0, result, currentIndex, arr.length)
+            currentIndex += arr.length
+        }
+
+        return new OCFile.FileInputStream(result)
     }
 
     @Override

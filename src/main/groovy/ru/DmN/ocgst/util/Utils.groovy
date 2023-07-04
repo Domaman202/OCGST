@@ -13,16 +13,15 @@ class Utils {
     }
 
     static byte[][] split(byte[] array, int count) {
-        var size = Math.ceil(array.length / count as int) as int
-        var elements = new byte[count][size]
-        var k = 0
-        for (i in 0..<count) {
-            var element = elements[i]
-            for (j in 0..<size) {
-                if (k == array.length)
-                    break
-                element[j] = array[k++]
-            }
+        int size = (array.length / count) as int + (array.length % count > 0 ? 1 : 0)
+        byte[][] elements = new byte[count][]
+        int k = 0
+        for (int i = 0; i < count; i++) {
+            int elementLength = Math.min(size, array.length - k)
+            byte[] element = new byte[elementLength]
+            System.arraycopy(array, k, element, 0, elementLength)
+            elements[i] = element
+            k += elementLength
         }
         return elements
     }

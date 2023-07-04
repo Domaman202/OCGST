@@ -10,7 +10,7 @@ import ru.DmN.ocgst.util.Actions
 @Canonical
 @CompileStatic
 @EqualsAndHashCode
-class OCFile {
+class OCFile implements IOCFile {
     protected final OCConnection connection
     protected final int fs
     protected String path
@@ -21,32 +21,39 @@ class OCFile {
         this.fs = fs
     }
 
+    @Override
     String getName() {
         return this.path.substring(this.path.lastIndexOf("/"))
     }
 
+    @Override
     String getAbsolutePath() {
         return this.path
     }
 
+    @Override
     OCFile subfile(String path) {
         return new OCFile(this.connection, this.fs, this.getAbsolutePath() + "/" + path)
     }
 
+    @Override
     void mkdir() {
         this.connection.pushAction(Actions.MKDIR, this.fs, this.path)
     }
 
+    @Override
     boolean isDirectory() {
         var result = null
         this.connection.pushAction(Actions.ISDIR, this.fs, this.path, { result = it.is.read() == 1 })
         return result
     }
 
+    @Override
     void delete() {
         this.connection.pushAction(Actions.DELETE, this.fs, this.path)
     }
 
+    @Override
     InputStream openInputStream() {
         byte[] bytes = null
         this.connection.pushAction(Actions.READ, this.fs, this.getAbsolutePath(), { bytes = it.read() })
@@ -54,6 +61,7 @@ class OCFile {
         return new FileInputStream(bytes)
     }
 
+    @Override
     OutputStream openOutputStream() {
         return new FileOutputStream()
     }

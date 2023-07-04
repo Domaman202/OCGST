@@ -43,6 +43,7 @@ class MainTests {
         test1(dir$test, "C")
         test0(dir$test, "D.txt")
         test0(dir$test, "E.mp3")
+        test0(dir$test, "F.mp4")
     }
 
     static void test0(IOCFile dir$test, String file) {
@@ -65,7 +66,7 @@ class MainTests {
         }
         //
         sw.stop()
-        println("[File = text${file}][Time = $sw]")
+        println("[File = in${file}][Time = $sw]")
         //
         try (var output = new FileOutputStream("test/out${file}")) {
             output.write(br)
@@ -90,7 +91,7 @@ class MainTests {
         }
         //
         sw.stop()
-        println("[File = image${file}.png][Time = $sw]")
+        println("[File = in${file}.png][Time = $sw]")
         //
 //        println(br)
         ImageIO.write(ImageUtils.toBufferedImage((br as List<Byte>).toArray() as byte[]), "PNG", new File("test/out${file}.png"))
