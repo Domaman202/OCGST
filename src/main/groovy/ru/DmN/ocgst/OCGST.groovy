@@ -3,7 +3,6 @@ package ru.DmN.ocgst
 import groovy.transform.CompileStatic
 import ru.DmN.ocgst.api.OCConnection
 
-
 @CompileStatic
 class OCGST {
     final List<OCConnection> connections = new ArrayList<OCConnection>()

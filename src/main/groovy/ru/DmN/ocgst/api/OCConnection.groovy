@@ -26,9 +26,7 @@ class OCConnection extends Thread {
         while (true) {
             switch (this.status) {
                 case Status.READY -> {
-                    if (this.pool.empty)
-                        onSpinWait()
-                    else {
+                    if (!this.pool.empty) {
                         this.status = Status.PROCESSING
                         var it = this.pool.remove()
                         this.send(it.v1.action, it.v1.fs, it.v1.path)
